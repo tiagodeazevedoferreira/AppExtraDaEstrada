@@ -1,0 +1,280 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2c5282">
+    <title>Encontre Padarias e Cafés</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="favicon.ico">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f7fafc;
+            color: #2d3748;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #2c5282;
+            text-align: center;
+            font-size: 1.8em;
+        }
+        .search-box {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        input, select {
+            padding: 10px;
+            border: 1px solid #cbd5e0;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+        button {
+            padding: 10px;
+            background-color: #2c5282;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        button:hover {
+            background-color: #2b6cb0;
+        }
+        .results {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .result-card {
+            background-color: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .result-card h3 {
+            margin: 0;
+            color: #2c5282;
+        }
+        .result-card p {
+            margin: 5px 0;
+            color: #4a5568;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .error {
+            color: #e53e3e;
+            text-align: center;
+        }
+        .details {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #edf2f7;
+            border-radius: 5px;
+        }
+        @media (max-width: 600px) {
+            .container {
+                padding: 10px;
+            }
+            h1 {
+                font-size: 1.5em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Encontre Padarias, Docerias e Cafés</h1>
+        <div class="search-box">
+            <input type="text" id="address" placeholder="Digite o endereço (cidade, bairro ou rua)">
+            <select id="category">
+                <option value="bakery">Padaria</option>
+                <option value="cafe">Café</option>
+                <option value="dessert">Doceria</option>
+            </select>
+            <input type="text" id="specific" placeholder="Item específico (ex.: bolo de cenoura)">
+            <button onclick="searchPlaces()">Buscar</button>
+        </div>
+        <div id="error" class="error"></div>
+        <div id="results" class="results"></div>
+        <div id="pagination" class="pagination"></div>
+    </div>
+    <script src="https://maps.googleapis.com/maps/api/js?key=SUA_CHAVE_API&libraries=places"></script>
+    <script>
+        let currentPage = 0;
+        const resultsPerPage = 10;
+        let allResults = [];
+
+        function searchPlaces() {
+            const address = document.getElementById('address').value;
+            const category = document.getElementById('category').value;
+            const specific = document.getElementById('specific').value;
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = '';
+
+            if (!address) {
+                errorDiv.textContent = 'Por favor, digite um endereço válido.';
+                return;
+            }
+
+            // Geocodificar o endereço
+            const geocoder = new google.maps.Geocoder();
+            geocoder.geocode({ address }, (results, status) => {
+                if (status === 'OK') {
+                    const location = results[0].geometry.location;
+                    const lat = location.lat();
+                    const lng = location.lng();
+                    const radius = results[0].types.includes('locality') ? 25000 : 10000; // 25km para cidade, 10km para outros
+
+                    // Buscar locais
+                    const service = new google.maps.places.PlacesService(document.createElement('div'));
+                    service.nearbySearch({
+                        location: { lat, lng },
+                        radius,
+                        type: category === 'dessert' ? 'bakery' : category, // Doceria usa bakery como proxy
+                        keyword: specific || category
+                    }, (places, status) => {
+                        if (status === google.maps.places.PlacesServiceStatus.OK) {
+                            allResults = places.sort((a, b) => {
+                                const ratingDiff = (b.rating || 0) - (a.rating || 0);
+                                return ratingDiff !== 0 ? ratingDiff : a.vicinity.localeCompare(b.vicinity);
+                            });
+                            displayResults(0);
+                        } else {
+                            errorDiv.textContent = 'Erro ao buscar locais. Tente novamente.';
+                        }
+                    });
+                } else {
+                    errorDiv.textContent = 'Endereço inválido ou não encontrado.';
+                }
+            });
+        }
+
+        function displayResults(page) {
+            const resultsDiv = document.getElementById('results');
+            const paginationDiv = document.getElementById('pagination');
+            resultsDiv.innerHTML = '';
+            paginationDiv.innerHTML = '';
+
+            const start = page * resultsPerPage;
+            const end = start + resultsPerPage;
+            const pageResults = allResults.slice(start, end);
+
+            pageResults.forEach(place => {
+                const card = document.createElement('div');
+                card.className = 'result-card';
+                const priceLevel = place.price_level ? 'R$'.repeat(place.price_level) : 'Não informado';
+                const openNow = place.opening_hours ? place.opening_hours.open_now ? 'Aberto' : 'Fechado' : 'Não informado';
+                card.innerHTML = `
+                    <h3>${place.name}</h3>
+                    <p><strong>Endereço:</strong> ${place.vicinity}</p>
+                    <p><strong>Nota:</strong> ${place.rating || 'N/A'} (${place.user_ratings_total || 0} avaliações)</p>
+                    <p><strong>Preço:</strong> ${priceLevel}</p>
+                    <p><strong>Horário:</strong> ${place.opening_hours ? place.opening_hours.weekday_text.join('<br>') : 'Não informado'}</p>
+                    <p><strong>Status:</strong> ${openNow}</p>
+                    <button onclick="showDetails('${place.place_id}')">Perguntar sobre este local</button>
+                    <div id="details-${place.place_id}" class="details"></div>
+                `;
+                resultsDiv.appendChild(card);
+            });
+
+            // Paginação
+            if (allResults.length > resultsPerPage) {
+                const totalPages = Math.ceil(allResults.length / resultsPerPage);
+                if (page > 0) {
+                    const prev = document.createElement('button');
+                    prev.textContent = 'Anterior';
+                    prev.onclick = () => displayResults(page - 1);
+                    paginationDiv.appendChild(prev);
+                }
+                if (end < allResults.length) {
+                    const next = document.createElement('button');
+                    next.textContent = 'Próximo';
+                    next.onclick = () => displayResults(page + 1);
+                    paginationDiv.appendChild(next);
+                }
+            }
+
+            // Verificar resultados fora do raio
+            if (allResults.length === 0) {
+                const errorDiv = document.getElementById('error');
+                errorDiv.textContent = 'Nenhum resultado encontrado. Deseja buscar em outras cidades próximas?';
+            }
+        }
+
+        function showDetails(placeId) {
+            const specific = document.getElementById('specific').value;
+            const service = new google.maps.places.PlacesService(document.createElement('div'));
+            service.getDetails({ placeId, fields: ['reviews'] }, (place, status) => {
+                const detailsDiv = document.getElementById(`details-${placeId}`);
+                if (status === google.maps.places.PlacesServiceStatus.OK && place.reviews) {
+                    const relevantReviews = place.reviews.filter(review =>
+                        specific ? review.text.toLowerCase().includes(specific.toLowerCase()) : true
+                    );
+                    detailsDiv.innerHTML = relevantReviews.length > 0
+                        ? `<p><strong>Avaliações sobre "${specific}":</strong><br>${relevantReviews.map(r => r.text).join('<br>')}</p>`
+                        : `<p>Nenhuma avaliação encontrada para "${specific}".</p>`;
+                } else {
+                    detailsDiv.innerHTML = '<p>Detalhes não disponíveis.</p>';
+                }
+            });
+        }
+
+        // Registrar Service Worker para PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
+</body>
+</html>
