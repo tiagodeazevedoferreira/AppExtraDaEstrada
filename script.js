@@ -1,12 +1,9 @@
-```javascript
-// Chave de API da Geoapify
 const API_KEY = '866771b8739f4b1e8b439fc58f45cfcb';
-
-// Inicializa o mapa com Leaflet
 let map = null;
+
 function initMap(lat, lng) {
     if (map) {
-        map.setView([lat, lng], 12); // Atualiza a visualização se o mapa já existe
+        map.setView([lat, lng], 12);
         return;
     }
     map = L.map('map').setView([lat, lng], 12);
@@ -15,7 +12,6 @@ function initMap(lat, lng) {
     }).addTo(map);
 }
 
-// Função para buscar locais
 function searchPlaces() {
     const categories = [];
     if (document.getElementById('padaria').checked) categories.push('commercial.food_and_drink.bakery');
@@ -27,11 +23,13 @@ function searchPlaces() {
         return;
     }
 
-    // Limpa resultados anteriores
     document.getElementById('results').innerHTML = '';
-    if (map) map.eachLayer(layer => { if (layer instanceof L.Marker) map.removeLayer(layer); });
+    if (map) {
+        map.eachLayer(layer => {
+            if (layer instanceof L.Marker) map.removeLayer(layer);
+        });
+    }
 
-    // Obtém a localização do usuário
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(position => {
             const lat = position.coords.latitude;
@@ -54,12 +52,14 @@ function searchPlaces() {
     }
 }
 
-// Função para fazer a requisição à Geoapify
 function fetchPlaces(lat, lng, categories) {
     categories.forEach(category => {
-        const isCategory = category.includes('commercial.food_and_drink');
-        const param = isCategory ? `categories=${category}` : `name=${category}`;
-        const url = `https://api.geoapify.com/v2/places?${param}&filter=circle:${lng},${lat},5000&limit=20&apiKey=${API_KEY}`;
+        let url;
+        if (category.includes('commercial.food_and_drink')) {
+            url = `https://api.geoapify.com/v2/places?categories=${category}&filter=circle:${lng},${lat},5000&limit=20&apiKey=${API_KEY}`;
+        } else {
+            url = `https://api.geoapify.com/v2/places?name=${category}&filter=circle:${lng},${lat},5000&limit=20&apiKey=${API_KEY}`;
+        }
 
         fetch(url)
             .then(response => {
@@ -82,7 +82,6 @@ function fetchPlaces(lat, lng, categories) {
     });
 }
 
-// Função para exibir os resultados
 function displayResults(places, category) {
     const resultsDiv = document.getElementById('results');
     resultsDiv.innerHTML += `<h3>Resultados para ${category}:</h3><ul>`;
@@ -99,7 +98,6 @@ function displayResults(places, category) {
     resultsDiv.innerHTML += '</ul>';
 }
 
-// Registra o Service Worker
 if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js')
@@ -107,4 +105,3 @@ if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
             .catch(error => console.error('Erro ao registrar Service Worker:', error));
     });
 }
-```
