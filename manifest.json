@@ -1,20 +1,29 @@
 {
     "name": "Encontre Padarias e Cafés",
     "short_name": "Padarias",
+    "description": "Encontre as melhores padarias, docerias e cafés próximos a você!",
     "start_url": "index.html",
     "display": "standalone",
     "background_color": "#f7fafc",
     "theme_color": "#2c5282",
+    "lang": "pt-BR",
     "icons": [
+        {
+            "src": "icon-144.png",
+            "sizes": "144x144",
+            "type": "image/png"
+        },
         {
             "src": "icon-192.png",
             "sizes": "192x192",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any maskable"
         },
         {
             "src": "icon-512.png",
             "sizes": "512x512",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any maskable"
         }
     ]
 }
