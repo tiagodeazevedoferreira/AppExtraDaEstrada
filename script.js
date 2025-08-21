@@ -14,8 +14,27 @@ function initMap(lat, lng) {
     }).addTo(map);
 }
 
+// Função para geocodificar endereço em coordenadas
+async function geocodeAddress(address) {
+    const url = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(address)}&filter=countrycode:br&apiKey=${API_KEY}`;
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`Erro ${response.status}: ${response.statusText}`);
+        const data = await response.json();
+        if (data.features && data.features.length > 0) {
+            const coords = data.features[0].properties;
+            return { lat: coords.lat, lng: coords.lon };
+        } else {
+            throw new Error('Endereço não encontrado.');
+        }
+    } catch (error) {
+        alert(`Erro ao geocodificar endereço: ${error.message}. Usando localização padrão.`);
+        return null;
+    }
+}
+
 // Função para buscar locais
-function searchPlaces() {
+async function searchPlaces() {
     const categories = [];
     if (document.getElementById('padaria').checked) categories.push(document.getElementById('padaria').value);
     if (document.getElementById('cafe').checked) categories.push(document.getElementById('cafe').value);
@@ -30,30 +49,46 @@ function searchPlaces() {
     document.getElementById('results').innerHTML = '';
     if (map) map.eachLayer(layer => { if (layer instanceof L.Marker) map.removeLayer(layer); });
 
-    // Obtém a localização do usuário
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(position => {
-            const lat = position.coords.latitude;
-            const lng = position.coords.longitude;
-            initMap(lat, lng);
-            fetchPlaces(lat, lng, categories);
-        }, () => {
-            alert('Não foi possível obter sua localização. Usando São Paulo como padrão.');
-            const lat = -23.5505;
-            const lng = -46.6333;
-            initMap(lat, lng);
-            fetchPlaces(lat, lng, categories);
-        });
+    let lat, lng;
+    const address = document.getElementById('address').value.trim();
+
+    if (address) {
+        // Usa endereço digitado
+        const coords = await geocodeAddress(address);
+        if (coords) {
+            lat = coords.lat;
+            lng = coords.lng;
+        } else {
+            // Fallback se geocodificação falhar
+            lat = -23.5505;
+            lng = -46.6333;
+        }
     } else {
-        alert('Geolocalização não é suportada pelo seu navegador.');
-        const lat = -23.5505;
-        const lng = -46.6333;
-        initMap(lat, lng);
-        fetchPlaces(lat, lng, categories);
+        // Usa geolocalização se endereço vazio
+        if (navigator.geolocation) {
+            try {
+                const position = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject);
+                });
+                lat = position.coords.latitude;
+                lng = position.coords.longitude;
+            } catch {
+                alert('Não foi possível obter sua localização. Usando São Paulo como padrão.');
+                lat = -23.5505;
+                lng = -46.6333;
+            }
+        } else {
+            alert('Geolocalização não é suportada pelo seu navegador.');
+            lat = -23.5505;
+            lng = -46.6333;
+        }
     }
+
+    initMap(lat, lng);
+    fetchPlaces(lat, lng, categories);
 }
 
-// Função para fazer a requisição à Geoapify
+// Função para fazer a requisição à Geoapify Places API
 function fetchPlaces(lat, lng, categories) {
     // Combina todas as categorias em uma string única separada por vírgulas
     const combinedCategories = categories.join(',');
