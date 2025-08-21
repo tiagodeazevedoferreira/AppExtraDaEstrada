@@ -1,9 +1,11 @@
+// Chave de API da Geoapify
 const API_KEY = '866771b8739f4b1e8b439fc58f45cfcb';
-let map = null;
 
+// Inicializa o mapa com Leaflet
+let map = null;
 function initMap(lat, lng) {
     if (map) {
-        map.setView([lat, lng], 12);
+        map.setView([lat, lng], 12); // Atualiza a visualização se o mapa já existe
         return;
     }
     map = L.map('map').setView([lat, lng], 12);
@@ -12,24 +14,23 @@ function initMap(lat, lng) {
     }).addTo(map);
 }
 
+// Função para buscar locais
 function searchPlaces() {
     const categories = [];
-    if (document.getElementById('padaria').checked) categories.push('commercial.food_and_drink.bakery');
-    if (document.getElementById('cafe').checked) categories.push('commercial.food_and_drink.cafe');
-    if (document.getElementById('doceria').checked) categories.push('confeitaria');
+    if (document.getElementById('padaria').checked) categories.push(document.getElementById('padaria').value);
+    if (document.getElementById('cafe').checked) categories.push(document.getElementById('cafe').value);
+    if (document.getElementById('doceria').checked) categories.push(document.getElementById('doceria').value);
 
     if (categories.length === 0) {
         alert('Selecione pelo menos uma categoria!');
         return;
     }
 
+    // Limpa resultados anteriores
     document.getElementById('results').innerHTML = '';
-    if (map) {
-        map.eachLayer(layer => {
-            if (layer instanceof L.Marker) map.removeLayer(layer);
-        });
-    }
+    if (map) map.eachLayer(layer => { if (layer instanceof L.Marker) map.removeLayer(layer); });
 
+    // Obtém a localização do usuário
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(position => {
             const lat = position.coords.latitude;
@@ -52,39 +53,36 @@ function searchPlaces() {
     }
 }
 
+// Função para fazer a requisição à Geoapify
 function fetchPlaces(lat, lng, categories) {
-    categories.forEach(category => {
-        let url;
-        if (category.includes('commercial.food_and_drink')) {
-            url = `https://api.geoapify.com/v2/places?categories=${category}&filter=circle:${lng},${lat},5000&limit=20&apiKey=${API_KEY}`;
-        } else {
-            url = `https://api.geoapify.com/v2/places?name=${category}&filter=circle:${lng},${lat},5000&limit=20&apiKey=${API_KEY}`;
-        }
+    // Combina todas as categorias em uma string única separada por vírgulas
+    const combinedCategories = categories.join(',');
+    const url = `https://api.geoapify.com/v2/places?categories=${combinedCategories}&filter=circle:${lng.toFixed(7)},${lat.toFixed(7)},5000&bias=proximity:${lng.toFixed(7)},${lat.toFixed(7)}&limit=20&lang=pt&apiKey=${API_KEY}`;
 
-        fetch(url)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Erro ${response.status}: ${response.statusText}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.features && data.features.length > 0) {
-                    displayResults(data.features, category);
-                } else {
-                    document.getElementById('results').innerHTML += `<p class="error">Nenhum resultado encontrado para ${category}.</p>`;
-                }
-            })
-            .catch(error => {
-                console.error('Erro na busca:', error);
-                document.getElementById('results').innerHTML += `<p class="error">Erro ao buscar ${category}: ${error.message}</p>`;
-            });
-    });
+    fetch(url)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Erro ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.features && data.features.length > 0) {
+                displayResults(data.features, 'Resultados combinados');
+            } else {
+                document.getElementById('results').innerHTML += `<p>Nenhum resultado encontrado.</p>`;
+            }
+        })
+        .catch(error => {
+            console.error('Erro na busca:', error);
+            document.getElementById('results').innerHTML += `<p>Erro na busca: ${error.message}</p>`;
+        });
 }
 
-function displayResults(places, category) {
+// Função para exibir os resultados
+function displayResults(places, title) {
     const resultsDiv = document.getElementById('results');
-    resultsDiv.innerHTML += `<h3>Resultados para ${category}:</h3><ul>`;
+    resultsDiv.innerHTML += `<h3>${title}:</h3><ul>`;
     places.forEach(place => {
         const name = place.properties.name || 'Sem nome';
         const address = place.properties.formatted || 'Endereço não disponível';
@@ -98,6 +96,7 @@ function displayResults(places, category) {
     resultsDiv.innerHTML += '</ul>';
 }
 
+// Registra o Service Worker
 if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js')

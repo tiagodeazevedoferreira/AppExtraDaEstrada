@@ -37,8 +37,7 @@
         }
         return gk_fileData[filename] || "";
         }
-        </script>```html
-<!DOCTYPE html>
+        </script><!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -61,7 +60,6 @@
         li { margin: 10px 0; padding: 10px; background-color: white; border-radius: 5px; }
         section { margin-bottom: 20px; }
         label { margin-right: 10px; }
-        .error { color: red; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -72,9 +70,9 @@
         <section>
             <input type="checkbox" id="padaria" name="category" value="commercial.food_and_drink.bakery">
             <label for="padaria">Padaria</label>
-            <input type="checkbox" id="cafe" name="category" value="commercial.food_and_drink.cafe">
+            <input type="checkbox" id="cafe" name="category" value="catering.cafe,catering.cafe.coffee_shop">
             <label for="cafe">Café</label>
-            <input type="checkbox" id="doceria" name="category" value="confeitaria">
+            <input type="checkbox" id="doceria" name="category" value="catering.cafe.dessert,commercial.food_and_drink.confectionery,commercial.food_and_drink.ice_cream">
             <label for="doceria">Doceria</label>
             <button onclick="searchPlaces()">Buscar</button>
         </section>
@@ -83,4 +81,3 @@
     </main>
 </body>
 </html>
-```

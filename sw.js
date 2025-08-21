@@ -1,11 +1,5 @@
 const CACHE_NAME = 'padarias-cache-v1';
-const urlsToCache = [
-    './',
-    './index.html',
-    './script.js',
-    './icon-192.png',
-    './icon-512.png'
-];
+const urlsToCache = ['index.html', 'script.js', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', event => {
     event.waitUntil(
@@ -31,14 +25,7 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-    // Não cachear requisições não HTTP
-    if (!event.request.url.startsWith('http')) {
-        return;
-    }
-    
     event.respondWith(
-        caches.match(event.request).then(response => {
-            return response || fetch(event.request);
-        })
+        caches.match(event.request).then(response => response || fetch(event.request))
     );
 });
