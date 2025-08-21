@@ -54,13 +54,16 @@
         h1 { color: #2c5282; }
         #map { height: 400px; width: 100%; margin-top: 20px; }
         #results { margin-top: 20px; }
-        button { padding: 10px 20px; background-color: #2c5282; color: white; border: none; cursor: pointer; }
+        button { padding: 10px 20px; background-color: #2c5282; color: white; border: none; cursor: pointer; margin-right: 10px; }
         button:hover { background-color: #1a4971; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
         ul { list-style: none; padding: 0; }
         li { margin: 10px 0; padding: 10px; background-color: white; border-radius: 5px; }
         section { margin-bottom: 20px; }
         label { margin-right: 10px; }
-        input[type="text"] { padding: 10px; width: 100%; max-width: 400px; margin-bottom: 10px; }
+        input[type="text"], select { padding: 10px; width: 100%; max-width: 400px; margin-bottom: 10px; }
+        .loader { display: none; border: 4px solid #f3f3f3; border-top: 4px solid #2c5282; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -70,15 +73,23 @@
     <main>
         <section>
             <input type="text" id="address" placeholder="Digite cidade, bairro ou endereço (ex.: Rua Paulista, São Paulo)">
-            <input type="text" id="specificTerm" placeholder="Digite produto ou tipo de comida (ex.: brigadeiros)">
+            <input type="text" id="specificTerm" placeholder="Digite produto ou tipo de comida (ex.: brigadeiros, bolo de cenoura)">
+            <select id="radius">
+                <option value="1000">1 km</option>
+                <option value="5000" selected>5 km</option>
+                <option value="10000">10 km</option>
+            </select>
             <input type="checkbox" id="padaria" name="category" value="commercial.food_and_drink.bakery">
             <label for="padaria">Padaria</label>
             <input type="checkbox" id="cafe" name="category" value="catering.cafe,catering.cafe.coffee_shop">
             <label for="cafe">Café</label>
             <input type="checkbox" id="doceria" name="category" value="catering.cafe.dessert,commercial.food_and_drink.confectionery,commercial.food_and_drink.ice_cream">
             <label for="doceria">Doceria</label>
-            <button onclick="searchPlaces()">Buscar</button>
+            <button id="searchButton" onclick="searchPlaces(0)">Buscar</button>
+            <button id="prevPage" onclick="searchPlaces(currentOffset - 20)" disabled>Anterior</button>
+            <button id="nextPage" onclick="searchPlaces(currentOffset + 20)" disabled>Próxima</button>
         </section>
+        <div id="loader" class="loader"></div>
         <div id="map"></div>
         <div id="results"></div>
     </main>
