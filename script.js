@@ -51,6 +51,7 @@ async function searchPlaces() {
 
     let lat, lng;
     const address = document.getElementById('address').value.trim();
+    const specificTerm = document.getElementById('specificTerm').value.trim();
 
     if (address) {
         // Usa endereço digitado
@@ -85,14 +86,19 @@ async function searchPlaces() {
     }
 
     initMap(lat, lng);
-    fetchPlaces(lat, lng, categories);
+    fetchPlaces(lat, lng, categories, specificTerm);
 }
 
 // Função para fazer a requisição à Geoapify Places API
-function fetchPlaces(lat, lng, categories) {
+function fetchPlaces(lat, lng, categories, specificTerm) {
     // Combina todas as categorias em uma string única separada por vírgulas
     const combinedCategories = categories.join(',');
-    const url = `https://api.geoapify.com/v2/places?categories=${combinedCategories}&filter=circle:${lng.toFixed(7)},${lat.toFixed(7)},5000&bias=proximity:${lng.toFixed(7)},${lat.toFixed(7)}&limit=20&lang=pt&apiKey=${API_KEY}`;
+    let url = `https://api.geoapify.com/v2/places?categories=${combinedCategories}&filter=circle:${lng.toFixed(7)},${lat.toFixed(7)},5000&bias=proximity:${lng.toFixed(7)},${lat.toFixed(7)}&limit=20&lang=pt&apiKey=${API_KEY}`;
+    
+    // Adiciona o termo específico se fornecido
+    if (specificTerm) {
+        url += `&name=${encodeURIComponent(specificTerm)}`;
+    }
 
     fetch(url)
         .then(response => {
